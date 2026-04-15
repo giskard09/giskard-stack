@@ -121,11 +121,17 @@ the way down.
 
 ## Listed on
 
-All six servers are being listed in [punkpeye/awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers).
-As of April 2026: **3 merged** (Search, Oasis, Argentum), **1 in review**
-(Memory), **2 upcoming** (Marks, Origin).
+**[Official MCP Registry](https://registry.modelcontextprotocol.io)** — five
+servers live under the `io.github.giskard09/*` namespace, all `active`:
 
-Quality + security scores tracked on [Glama](https://glama.ai/mcp).
+- `io.github.giskard09/argentum` · v0.4.0
+- `io.github.giskard09/memory` · v1.0.1
+- `io.github.giskard09/oasis` · v0.1.0
+- `io.github.giskard09/origin` · v0.1.0
+- `io.github.giskard09/search` · v0.1.1
+
+Also indexed on [punkpeye/awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers)
+and [Glama](https://glama.ai/mcp) for quality/security tracking.
 
 ---
 
