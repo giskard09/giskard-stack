@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Giskard Stack — Infrastructure for Autonomous Agents</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #141414;
+    --border: #222;
+    --text: #e8e8e8;
+    --muted: #666;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --accent: #818cf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 48px 24px;
+  }
+  header {
+    max-width: 760px;
+    margin: 0 auto 48px;
+  }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  header p {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  header a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .stack {
+    max-width: 760px;
+    margin: 0 auto;
+    display: grid;
+    gap: 12px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 12px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #333; }
+  .card-left {}
+  .card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .card-desc {
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+  .meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .meta-item {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .meta-item span {
+    color: var(--text);
+  }
+  .card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    min-width: 90px;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    margin-bottom: 4px;
+  }
+  .dot.healthy { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.degraded { background: var(--yellow); }
+  .dot.down { background: var(--red); }
+  .status-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .uptime {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .version {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .deps {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .dep {
+    font-size: 10px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: var(--muted);
+  }
+  footer {
+    max-width: 760px;
+    margin: 48px auto 0;
+    color: var(--muted);
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .refresh-btn:hover { border-color: #444; color: var(--text); }
+  .last-updated { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Giskard Stack</h1>
+  <p>Infrastructure for autonomous AI agents &mdash; <a href="https://github.com/giskard09" target="_blank">github.com/giskard09</a></p>
+</header>
+
+<div class="stack" id="stack">
+  <!-- populated by JS -->
+</div>
+
+<footer>
+  <span class="last-updated" id="last-updated">checking...</span>
+  <button class="refresh-btn" onclick="loadAll()">refresh</button>
+</footer>
+
+<script>
+const SERVICES = [
+  {
+    id: "giskard-search",
+    name: "Search",
+    desc: "Semantic web search. Karma-discounted pricing. Lightning + Arbitrum.",
+    url: "https://search.rgiskard.xyz/status",
+    fallback: "http://localhost:8004/status",
+    repo: "giskard09/giskard-search",
+  },
+  {
+    id: "giskard-memory",
+    name: "Memory",
+    desc: "Persistent embeddings. Store and recall across sessions.",
+    url: "https://memory.rgiskard.xyz/status",
+    fallback: "http://localhost:8005/status",
+    repo: "giskard09/giskard-memory",
+  },
+  {
+    id: "giskard-oasis",
+    name: "Oasis",
+    desc: "Contextual Claude sessions. Identity and karma shape the response.",
+    url: "https://oasis.rgiskard.xyz/status",
+    fallback: "http://localhost:8003/status",
+    repo: "giskard09/giskard-oasis",
+  },
+  {
+    id: "giskard-origin",
+    name: "Origin",
+    desc: "Free orientation for new agents. The map before the journey.",
+    url: "https://origin.rgiskard.xyz/status",
+    fallback: "http://localhost:8008/status",
+    repo: "giskard09/mcp-origin",
+  },
+  {
+    id: "giskard-marks",
+    name: "Marks",
+    desc: "On-chain identity and pubkey registry. Proof of presence on Arbitrum.",
+    url: "https://marks.rgiskard.xyz/status",
+    fallback: "http://localhost:8015/status",
+    repo: "giskard09/giskard-marks",
+  },
+  {
+    id: "argentum-core",
+    name: "Argentum",
+    desc: "Karma economy. Community-attested actions. On-chain anchors.",
+    url: "https://argentum.rgiskard.xyz/status",
+    fallback: "http://localhost:8017/status",
+    repo: "giskard09/argentum-core",
+  },
+];
+
+function fmtUptime(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds/60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds/3600)}h ${Math.floor((seconds%3600)/60)}m`;
+  return `${Math.floor(seconds/86400)}d ${Math.floor((seconds%86400)/3600)}h`;
+}
+
+function renderCard(svc, data, error) {
+  const healthy = data && data.healthy;
+  const dotClass = error ? "down" : (healthy ? "healthy" : "degraded");
+  const statusText = error ? "unreachable" : (healthy ? "healthy" : "degraded");
+
+  const extraMeta = [];
+  if (data && data.total_marks != null) extraMeta.push(`<span class="meta-item">marks <span>${data.total_marks}</span></span>`);
+  if (data && data.total_actions != null) extraMeta.push(`<span class="meta-item">actions <span>${data.total_actions}</span></span>`);
+  if (data && data.free) extraMeta.push(`<span class="meta-item">pricing <span>free</span></span>`);
+
+  const deps = data && data.dependencies ? data.dependencies : [];
+
+  return `
+    <div class="card" id="card-${svc.id}">
+      <div class="card-left">
+        <div class="card-name">${svc.name}</div>
+        <div class="card-desc">${svc.desc}</div>
+        <div class="meta">
+          ${data ? `<span class="meta-item">v<span>${data.version || '?'}</span></span>` : ''}
+          ${data ? `<span class="meta-item">uptime <span>${fmtUptime(data.uptime_seconds || 0)}</span></span>` : ''}
+          ${extraMeta.join('')}
+        </div>
+        ${deps.length ? `<div class="deps">${deps.map(d => `<span class="dep">${d}</span>`).join('')}</div>` : ''}
+      </div>
+      <div class="card-right">
+        <div class="dot ${dotClass}"></div>
+        <div class="status-label">${statusText}</div>
+        ${data ? `<div class="version">port ${data.port}</div>` : ''}
+        <a href="https://github.com/${svc.repo}" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;">github</a>
+      </div>
+    </div>
+  `;
+}
+
+async function fetchStatus(svc) {
+  // Try public URL first, fall back to localhost
+  const urls = [svc.url, svc.fallback].filter(Boolean);
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+  }
+  return null;
+}
+
+async function loadAll() {
+  document.getElementById("last-updated").textContent = "refreshing...";
+  const container = document.getElementById("stack");
+
+  // Render skeleton
+  container.innerHTML = SERVICES.map(s => renderCard(s, null, false)).join('');
+
+  // Fetch all in parallel
+  const results = await Promise.all(SERVICES.map(svc =>
+    fetchStatus(svc).then(data => ({ svc, data, error: !data }))
+  ));
+
+  container.innerHTML = results.map(({ svc, data, error }) =>
+    renderCard(svc, data, error)
+  ).join('');
+
+  const now = new Date();
+  document.getElementById("last-updated").textContent =
+    `last checked ${now.toLocaleTimeString()}`;
+}
+
+loadAll();
+// Auto-refresh every 60s
+setInterval(loadAll, 60000);
+</script>
+</body>
+</html>
