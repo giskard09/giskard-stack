@@ -156,6 +156,85 @@
   }
   .refresh-btn:hover { border-color: #444; color: var(--text); }
   .last-updated { color: var(--muted); }
+  /* Agent cards section */
+  .section-title {
+    max-width: 760px;
+    margin: 48px auto 16px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .agents {
+    max-width: 760px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .agent-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    transition: border-color 0.2s;
+  }
+  .agent-card:hover { border-color: #333; }
+  .agent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .agent-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .agent-type {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    color: var(--muted);
+  }
+  .agent-type.agent { color: var(--accent); border-color: #2d2d5a; background: #13132a; }
+  .agent-karma {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .agent-karma-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .agent-stats {
+    display: flex;
+    gap: 14px;
+  }
+  .agent-stat {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .agent-stat span { color: var(--text); }
+  .agent-trails {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .agent-trails span { color: var(--text); }
 </style>
 </head>
 <body>
@@ -168,6 +247,9 @@
 <div class="stack" id="stack">
   <!-- populated by JS -->
 </div>
+
+<div class="section-title">Agents</div>
+<div class="agents" id="agents"><!-- populated by JS --></div>
 
 <footer>
   <span class="last-updated" id="last-updated">checking...</span>
@@ -294,9 +376,71 @@ async function loadAll() {
     `last checked ${now.toLocaleTimeString()}`;
 }
 
+async function fetchTrailCount(agent_id) {
+  try {
+    const r = await fetch(`https://marks.rgiskard.xyz/trails/count/${agent_id}`,
+      { signal: AbortSignal.timeout(4000) });
+    if (r.ok) { const d = await r.json(); return d.count_today ?? null; }
+  } catch (_) {}
+  return null;
+}
+
+function renderAgentCard(entity, trails) {
+  const typeClass = entity.entity_type === "agent" ? "agent" : "";
+  const lastAction = entity.last_action
+    ? new Date(entity.last_action).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : "—";
+  const trailsHtml = trails !== null
+    ? `<div class="agent-trails">trails today <span>${trails}</span></div>`
+    : "";
+  return `
+    <div class="agent-card">
+      <div class="agent-header">
+        <div class="agent-name">${entity.entity_name}</div>
+        <div class="agent-type ${typeClass}">${entity.entity_type}</div>
+      </div>
+      <div class="agent-karma">${entity.total_karma}</div>
+      <div class="agent-karma-label">karma</div>
+      <div class="agent-stats">
+        <div class="agent-stat">verified <span>${entity.verified_actions}</span></div>
+        <div class="agent-stat">attested <span>${entity.attestations_given}</span></div>
+        <div class="agent-stat">last <span>${lastAction}</span></div>
+      </div>
+      ${trailsHtml}
+    </div>`;
+}
+
+async function loadAgents() {
+  const container = document.getElementById("agents");
+  try {
+    const r = await fetch("https://argentum.rgiskard.xyz/leaderboard",
+      { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) throw new Error("leaderboard unreachable");
+    const entities = await r.json();
+
+    // Fetch trail counts in parallel for agent-type entities
+    const withTrails = await Promise.all(entities.map(async (e) => {
+      const trails = e.entity_type === "agent" ? await fetchTrailCount(e.entity_id) : null;
+      return { ...e, trails };
+    }));
+
+    // agents first, then humans, sorted by karma
+    const sorted = [
+      ...withTrails.filter(e => e.entity_type === "agent"),
+      ...withTrails.filter(e => e.entity_type !== "agent"),
+    ];
+
+    container.innerHTML = sorted.map(e => renderAgentCard(e, e.trails)).join('');
+  } catch (err) {
+    container.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:16px">leaderboard unreachable</div>`;
+  }
+}
+
 loadAll();
+loadAgents();
 // Auto-refresh every 60s
 setInterval(loadAll, 60000);
+setInterval(loadAgents, 60000);
 </script>
 </body>
 </html>
