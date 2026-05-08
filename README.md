@@ -1,19 +1,24 @@
 # Giskard Stack
 
-**Infrastructure for autonomous AI agents.** Six MCP servers, cryptographic
-identity, karma-based reputation, Lightning payments, and on-chain anchors on
-Arbitrum One — with Kleros as the planned dispute layer.
+**The accountability layer for any entity that acts.**
 
-Built for the Mycelium ecosystem by [Rama](https://github.com/giskard09).
+Six MCP servers, cryptographic identity, karma-based reputation, Lightning
+payments, post-execution trails, and on-chain anchors on Arbitrum One + Base —
+with Kleros as the dispute layer.
+
+Part of the [RAMA Weave](https://github.com/giskard09/rama-core). Built by [Rama](https://github.com/giskard09).
 
 ---
 
 ## What is this
 
-AI agents need the same things humans do: **memory that persists, an identity
-that can be verified, a reputation that follows them across sessions, and a
-way to transact.** No single service solves that. The Giskard Stack is the
-set of services that, together, do.
+Autonomous agents — and the humans who deploy them — need the same things:
+**memory that persists, an identity that can be verified, a reputation that
+follows them across sessions, a way to transact, and proof of what actually
+happened after the fact.**
+
+No single service solves that. The Giskard Stack is the set of services that,
+together, do.
 
 Each service is an independent MCP server with its own repository, license
 (Apache 2.0), and payment rail. They compose — but you can use any of them
@@ -25,8 +30,8 @@ alone.
 
 ```
                         ┌─────────────────────────┐
-                        │      AGENT (any SDK)    │
-                        │  MCP client / REST call │
+                        │    ENTITY (any SDK)     │
+                        │  agent · human · robot  │
                         └────────────┬────────────┘
                                      │
         ┌────────────────────────────┼────────────────────────────┐
@@ -51,19 +56,25 @@ alone.
             │  (REST :8015)│   actions     │  (MCP :8017) │
             └──────┬───────┘               └──────┬───────┘
                    │                              │
-                   │        on-chain anchors      │
                    ▼                              ▼
             ┌──────────────────────────────────────────┐
-            │           ARBITRUM ONE (mainnet)         │
-            │  Marks · Payments · ARGT · Reputation    │
+            │        MYCELIUM TRAILS                   │
+            │  post-execution accountability receipts  │
+            │  payment_hash · action_ref · on-chain    │
+            │  anchor · Arbitrum One + Base mainnet    │
             └──────────────────┬───────────────────────┘
                                │
-                               ▼  (disputes — planned)
-                     ┌───────────────────┐
-                     │      KLEROS       │
-                     │  decentralized    │
-                     │   arbitration     │
-                     └───────────────────┘
+                    ┌──────────┴──────────┐
+                    ▼                     ▼
+           ARBITRUM ONE             BASE MAINNET
+           (identity · karma)   (trails · payments)
+                    │
+                    ▼  (disputes)
+          ┌───────────────────┐
+          │      KLEROS       │
+          │  decentralized    │
+          │   arbitration     │
+          └───────────────────┘
 
             ┌──────────────┐
             │    ORIGIN    │   free meta-server: discovers the
@@ -73,47 +84,64 @@ alone.
 
 ---
 
-## The six servers
+## The seven servers
 
 | Server | What it does | Payment | Repo |
 |--------|--------------|---------|------|
-| **[Search](https://github.com/giskard09/giskard-search)** | Semantic web search with MCP | 3–10 sats/query | `giskard09/giskard-search` |
+| **[Search](https://github.com/giskard09/giskard-search)** | Semantic web search | 3–10 sats/query | `giskard09/giskard-search` |
 | **[Memory](https://github.com/giskard09/giskard-memory)** | Persistent vector memory across sessions | 1–5 sats/op | `giskard09/giskard-memory` |
 | **[Oasis](https://github.com/giskard09/giskard-oasis)** | Contextual Claude consultation when an agent is stuck | 5–21 sats | `giskard09/giskard-oasis` |
-| **[Marks](https://github.com/giskard09/giskard-marks)** | Cryptographic identity + Ed25519 signatures, anchored on Arbitrum | free (verification) | `giskard09/giskard-marks` |
-| **[Argentum](https://github.com/giskard09/argentum-core)** | Karma economy — community-verified actions, attestations, slashing | free (read), paid (write) | `giskard09/argentum-core` |
-| **[Origin](https://github.com/giskard09/mcp-origin)** | Meta-server: health checks + discovery for the stack | free | `giskard09/mcp-origin` |
-
-All six expose a uniform `get_status()` endpoint for health monitoring.
+| **[Marks](https://github.com/giskard09/giskard-marks)** | Cryptographic identity + Ed25519 signatures, anchored on Arbitrum | free | `giskard09/giskard-marks` |
+| **[Argentum](https://github.com/giskard09/argentum-core)** | Karma economy — community-verified actions, attestations, slashing | free (read) | `giskard09/argentum-core` |
+| **[Mycelium Trails](https://github.com/giskard09/giskard-stack)** | Post-execution accountability receipts — signed, payment-linked, dual-chain anchored | 21 sats/trail | `giskard09/giskard-stack` |
+| **[Origin](https://github.com/giskard09/mcp-origin)** | Meta-server: health checks + discovery | free | `giskard09/mcp-origin` |
 
 ---
 
 ## How they compose
 
-**Identity flows up.** An agent registers once in Marks and gets a permanent
+**Identity flows up.** An entity registers once in Marks and gets a permanent
 on-chain mark. That mark is its identity everywhere else.
 
 **Reputation accumulates.** Verified actions build karma in Argentum.
-Attestors sign off on what an agent has done; slashing punishes bad actors.
+Attestors sign off on what an entity has done; slashing punishes bad actors.
 
 **Pricing follows reputation.** Search, Memory and Oasis read karma from
-Argentum to discount their prices. An agent with 50+ karma pays up to 5×
+Argentum to discount their prices. An entity with 50+ karma pays up to 5×
 less than an anonymous caller.
 
-**Disputes go to Kleros** *(planned).* When an action is contested, the
-dispute is escalated to Kleros Court v2 on Arbitrum One. `ArgentumArbitrable.sol`
-is written and waiting on final arbitrator configuration.
+**Execution leaves proof.** Mycelium Trails records what happened after payment
+settled — a signed, on-chain-anchored receipt linking payment_hash to action.
+Verifiable by anyone. Usable in disputes, audits, insurance, and reputation scoring.
+
+**Disputes go to Kleros.** When an action is contested, the trail is the
+evidence. `ArgentumArbitrable.sol` is written and waiting on final configuration.
+
+---
+
+## Ecosystem
+
+Mycelium Trails is part of the **Agent Trust Loop** — a verifiable accountability
+stack built with:
+
+- [Agent Passport System](https://github.com/aeoess/agent-passport-system) — identity + governance
+- [Sentinel Alpha](https://github.com/chox-cell/Sentinel-Alpha) — law-bound AI infrastructure
+- [x402](https://github.com/x402-foundation/x402) — agent-native payments
+- [AgentKit](https://github.com/coinbase/agentkit/pull/1170) — Coinbase agent framework (PR in review)
+
+The coordination layer: [RAMA](https://github.com/giskard09/rama-core) — a weave of entities
+aligned around verifiable accountability.
 
 ---
 
 ## Why this exists
 
-Every agent developer rebuilds the same five things from scratch: memory,
-identity, reputation, payments, dispute resolution. We got tired of watching
+Every agent developer rebuilds the same things from scratch: memory,
+identity, reputation, payments, proof of execution. We got tired of watching
 that. So we built them once, made them composable, and put them on-chain where
 they matter.
 
-If you're building an agent and any of the six services fit your stack, use
+If you're building an agent and any of the seven services fit your stack, use
 them. If you're building something adjacent, fork anything. Apache 2.0 all
 the way down.
 
@@ -131,13 +159,7 @@ servers live under the `io.github.giskard09/*` namespace, all `active`:
 - `io.github.giskard09/search` · v0.1.1
 
 Also indexed on [punkpeye/awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers)
-and [Glama](https://glama.ai/mcp) for quality/security tracking.
-
----
-
-## Status dashboard
-
-Coming soon: live `/stack` page consuming the six `get_status()` endpoints.
+and [Glama](https://glama.ai/mcp).
 
 ---
 
@@ -146,4 +168,4 @@ Coming soon: live `/stack` page consuming the six `get_status()` endpoints.
 - GitHub: [github.com/giskard09](https://github.com/giskard09)
 - Moltbook: [@giskardmcp](https://www.moltbook.com/u/giskardmcp)
 
-Built by agents, for agents.
+Built by humans and agents, for any entity that acts.
